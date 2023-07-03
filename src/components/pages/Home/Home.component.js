@@ -1,66 +1,124 @@
-import './Home.component.css';
-import axios from 'axios';
-import env from "react-dotenv";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, generatePath } from 'react-router-dom';
 
+import './Home.component.css';
+
+import { usersAPI, roomsAPI, roomUsersAPI } from '../../../api';
+import { socketComponent } from '../../../socket';
+
 const Home = () => {
-    const [name, setName] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
+  const [name, setName] = useState('');
+  const [roomCode, setRoomCode] = useState('');
+  const [joinRoomActive, setJoinRoomActive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [socket, setSocket] = useState(socketComponent);
 
-    let navigate = useNavigate();
-    const handleChange = (event) => {
-        setName(event.target.value);
-    };
+  let navigate = useNavigate();
+  const nameChange = (event) => {
+    setName(event.target.value);
+  };
 
-    const routeChange = (roomCode) => {
-        console.log('roomId:', roomCode)
+  const roomCodeChange = (event) => {
+    setRoomCode(event.target.value);
+  };
 
-        const path = generatePath('/room/:id', { id: roomCode });
-        console.log('PATH:', path)
-        navigate(path);
-    }
-
-    const createGame = async () => {
-        try {
-            if (!name) {
-                throw new Error('Name is required');
-            }
-            console.log('Creating user')
-            const { data: user } = await axios.post(`${env.API_URL}/users`, { name: name });
-            console.log('User created. ID:', user.id)
-            console.log('Creating room')
-            const { data: room } = await axios.post(`${env.API_URL}/rooms`, { creator: user.id });
-            console.log(room)
-            routeChange(room.code)
-            // const userRoom = await axios.post(`${env.API_URL}/user-room`, user.id); //maybe this can be done when entering the room view
-        } catch (error) {
-            setErrorMessage(error.message)
+  const routeChange = (room) => {
+    try {
+      if (!room.code) {
+        throw Error('Room code is required');
+      }
+      console.log('entering route change with room -->', room.code)
+      const path = generatePath('/room/:id', { id: room.code });
+      navigate(path, {
+        id: room.code,
+        state: {
+          userName: name,
+          roomId: room.id
         }
-    };
+      });
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
+  }
 
-    return (
-        <div className="Screen">
-            <h1>
-                The Mind
-            </h1>
-            <input
-                className="name-input"
-                type="text"
-                id="name"
-                name="name"
-                onChange={handleChange}
-                placeholder="Enter your name"
-            />
-            {errorMessage && <div className="error"> {errorMessage} </div>}
-            <button onClick={createGame}>
-                Create New Room
-            </button>
-            <button onClick={createGame}>
-                Join Room
-            </button>
-        </div>
-    );
+  const createRoomUser = async ({room, user}) => {
+    try {
+      await roomUsersAPI.createRoomUser(room, user);
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
+  };
+
+  const generateAndJoinRoom = async () => {
+    try {
+      const user = await usersAPI.createUser(name)
+      const room = await roomsAPI.createRoom(user.id)
+      await createRoomUser({room, user})
+      sendNameSocket(name)
+      setRoomCode(room.code)
+      routeChange(room)
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
+  };
+
+  const sendNameSocket = (name)=>{
+    console.log('sendNameSocket: ', name)
+    socket?.emit('roomuser', name);
+  }
+
+  const joinRoom = async () => {
+    try {
+      if (!joinRoomActive){
+        setJoinRoomActive(true)
+        return
+      }
+      const room = await roomsAPI.getRoomByCode(roomCode)
+      const user = await usersAPI.createUser(name)
+      await createRoomUser({room, user})
+      console.log(`Entering room ${roomCode}`)
+      sendNameSocket(name)
+      routeChange(room)
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
+  };
+
+  useEffect(() => {
+    const newSocket = socketComponent;
+    setSocket(newSocket);
+  }, [setSocket]);
+
+  return (
+    <div className="Screen">
+      <h1>
+        The Mind
+      </h1>
+      <input
+        className="generic-input"
+        type="text"
+        id="name"
+        name="name"
+        onChange={nameChange}
+        placeholder="Enter your name"
+      />
+      {!joinRoomActive? <button onClick={generateAndJoinRoom}>
+        Create New Room
+      </button> : null}
+      {joinRoomActive? <input
+        className="generic-input"
+        type="text"
+        id="roomCode"
+        name="roomCode"
+        onChange={roomCodeChange}
+        placeholder="Enter room code"
+      />: null}
+      <button onClick={joinRoom}>
+        Join Room
+      </button>
+      {errorMessage && <div className="error"> {errorMessage} </div>}
+    </div>
+  );
 }
 
 export default Home;

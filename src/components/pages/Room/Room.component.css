@@ -1,0 +1,35 @@
+.table-container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  width: 60vw;
+  border: 1px solid white;
+  font-size: 12px;
+}
+
+table {
+  font-family: Tahoma, Geneva, sans-serif;
+  width: 100%;
+  border-collapse: collapse;
+}
+table td {
+	padding: 15px;
+}
+table thead th {
+	font-weight: normal;
+  padding: 10px;
+  font-size: 15px;
+}
+table tbody td {
+  padding: 10px;
+}
+table tbody tr {
+	background-color: transparent;
+}
+table tbody tr:nth-child(odd) {
+	background-color: #ffffff74;
+}
