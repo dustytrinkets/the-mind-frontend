@@ -26,3 +26,18 @@ export const getRoomByCode = async (roomCode) => {
       throw Error(error.message)
   }
 }
+
+export const getRoomCreator = async (roomId) => {
+  try {
+      console.log('Getting Room Creator', roomId)
+      const { data: room } = await axios.get(`${env.API_URL}/rooms/creator/${roomId}`);
+      if (!room) {
+        console.log('Room not found')
+        throw new Error('Room not found');
+      }
+      console.log('Found room creator', room)
+      return room;
+  } catch (error) {
+      throw Error(error.message)
+  }
+}

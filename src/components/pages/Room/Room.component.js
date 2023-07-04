@@ -5,14 +5,16 @@ import { useNavigate, generatePath } from 'react-router-dom';
 import './Room.component.css';
 
 import { socketComponent } from '../../../socket';
-import { roomUsersAPI } from '../../../api';
+import { roomUsersAPI, roomsAPI } from '../../../api';
 
 const Room = () => {
   const { id: roomCode } = useParams();
   const params = useLocation();
   const roomId = params?.state?.roomId
+  const userId = params?.state?.userId
   const [socket, setSocket] = useState(socketComponent);
   const [name, setName] = useState(params?.state?.userName);
+  const [creator, setCreator] = useState();
   const [roomUsers, setRoomUsers] = useState([]);
 
   let navigate = useNavigate();
@@ -22,6 +24,11 @@ const Room = () => {
     console.log('roomUsers: ', roomUsers)
     setRoomUsers(roomUsers);
   })
+
+  const getRoomCreator = async () => {
+    const creator = await roomsAPI.getRoomCreator(roomId)
+    setCreator(creator)
+  }
 
   useEffect(() => {
     socket.on('roomuser', fetchUsers);
@@ -42,6 +49,7 @@ const Room = () => {
     }
     setName(name);
     fetchUsers();
+    getRoomCreator()
   }, [name, navigate]);
 
   return (
@@ -59,12 +67,15 @@ const Room = () => {
           <tbody>
             {roomUsers.map((user) => (
               <tr key={user.id}>
-                <td>{user.name}</td>
+                <td className={(user.id === userId? 'me' : 'normal')}>{user.id === creator?.id ? '🧠' : ''} {user.name}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {creator?.id === userId && (
+        <button onClick={() => socket.emit('startgame', roomId)}>Start Game</button>
+      )}
     </div>
   );
 }

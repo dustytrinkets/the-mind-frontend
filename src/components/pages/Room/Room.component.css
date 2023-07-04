@@ -31,5 +31,10 @@ table tbody tr {
 	background-color: transparent;
 }
 table tbody tr:nth-child(odd) {
-	background-color: #ffffff74;
+	background-color: #515151;
+}
+
+.me{
+  font-weight: bold;
+  color: #d47171;
 }

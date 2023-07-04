@@ -22,7 +22,7 @@ const Home = () => {
     setRoomCode(event.target.value);
   };
 
-  const routeChange = (room) => {
+  const routeChange = (room, user) => {
     try {
       if (!room.code) {
         throw Error('Room code is required');
@@ -33,6 +33,7 @@ const Home = () => {
         id: room.code,
         state: {
           userName: name,
+          userId: user.id,
           roomId: room.id
         }
       });
@@ -54,9 +55,10 @@ const Home = () => {
       const user = await usersAPI.createUser(name)
       const room = await roomsAPI.createRoom(user.id)
       await createRoomUser({room, user})
+      console.log('-------userid: ', user)
       sendNameSocket(name)
       setRoomCode(room.code)
-      routeChange(room)
+      routeChange(room, user)
     } catch (error) {
       setErrorMessage(error.message)
     }
@@ -78,7 +80,7 @@ const Home = () => {
       await createRoomUser({room, user})
       console.log(`Entering room ${roomCode}`)
       sendNameSocket(name)
-      routeChange(room)
+      routeChange(room, user)
     } catch (error) {
       setErrorMessage(error.message)
     }
