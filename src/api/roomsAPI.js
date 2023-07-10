@@ -41,3 +41,18 @@ export const getRoomCreator = async (roomId) => {
       throw Error(error.message)
   }
 }
+
+export const updateRoomStatus = async (roomId, status) => {
+  try {
+      console.log('Updating Room Status', roomId, status)
+      const { data: room } = await axios.patch(`${env.API_URL}/rooms/${roomId}`, { status });
+      if (!room) {
+        console.log('Room not found')
+        throw new Error('Room not found');
+      }
+      console.log('Updated room status', room)
+      return room;
+  } catch (error) {
+      throw Error(error.message)
+  }
+}

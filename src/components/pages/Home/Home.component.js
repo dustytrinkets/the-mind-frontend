@@ -27,6 +27,16 @@ const Home = () => {
       if (!room.code) {
         throw Error('Room code is required');
       }
+      //avoid enter if room status is playing
+      if (room.status === 'playing') {
+        throw Error('Try joining in the next round. A game is already in progress');
+      }
+
+      //avoid enter if room is full
+      if (room.users.length >= 10) {
+        throw Error('Room is full');
+      }
+
       console.log('entering route change with room -->', room.code)
       const path = generatePath('/room/:id', { id: room.code });
       navigate(path, {
