@@ -6,7 +6,7 @@ import Cookies from 'universal-cookie';
 import './Room.component.css';
 
 import { socketComponent } from '../../../socket';
-import { roomUsersAPI, roomsAPI, gamesAPI } from '../../../api';
+import { roomUsersAPI, roomsAPI, gamesAPI, participationsAPI } from '../../../api';
 
 const Room = () => {
   const { id: roomCode } = useParams();
@@ -33,18 +33,20 @@ const Room = () => {
   //   ev.preventDefault();
   //   console.log('EV---', ev)
   //   //send socket disconnect before leaving
-  //   this.server.emit('roomuser', 'test');
-  //   socket.emit('user_leave', {user_name: "johnjoe123"});
-  //   return ev.returnValue = 'Are you sure you want to close?Help';
+  //   // this.server.emit('roomuser', 'test');
+  //   // socket.emit('user_leave', {user_name: "johnjoe123"});
+  //   // return ev.returnValue = 'Are you sure you want to close?Help';
   // });
 
-  const loadGame = async (gameId) => {
+  const loadGame = async ({gameId, numbers}) => {
     console.log('GAME STARTED')
-    //get game id
+
     if (!gameId) {
-      gameId = await gamesAPI.getCreatedGameId(roomId)
+      gameId = await gamesAPI.getActiveGameId(roomId)
+      numbers = await participationsAPI.getGameNumbers(gameId)
     }
-    console.log('gameId: ', gameId)
+    console.log('+++++++---->  gameId: ', gameId)
+    console.log('+++++++---->  numbers: ', numbers)
     const path = generatePath('game/:gameId', { roomId, gameId: gameId });
     navigate(path, {
       state: {
@@ -52,6 +54,8 @@ const Room = () => {
         roomCode,
         gameId,
         userId,
+        roomUsers: roomUsers.map(user => user.name),
+        numbers,
         userName: name
       }
     });
@@ -59,10 +63,12 @@ const Room = () => {
 
   const startNewGame = () => {
     return async () => {
-      const game = await gamesAPI.createGame(roomId)
+      const game = await gamesAPI.createGame(roomId, roomUsers.length)
       console.log('newGame: ', game)
-      socket.emit('startgame', game.id)
-      loadGame(game.id)
+      console.log('numbers: ', game.numbers)
+      socket.emit('startgame', { roomCode , id: game.id, numbers: game.numbers })
+      //the rest of users are not receiving the numbers like this
+      loadGame({gameId: game.id, numbers: game.numbers})
     }
   }
 

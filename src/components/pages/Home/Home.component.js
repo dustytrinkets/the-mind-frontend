@@ -32,11 +32,6 @@ const Home = () => {
         throw Error('Try joining in the next round. A game is already in progress');
       }
 
-      //avoid enter if room is full
-      if (room.users.length >= 10) {
-        throw Error('Room is full');
-      }
-
       console.log('entering route change with room -->', room.code)
       const path = generatePath('/room/:id', { id: room.code });
       navigate(path, {
@@ -76,7 +71,7 @@ const Home = () => {
 
   const sendNameSocket = (name)=>{
     console.log('sendNameSocket: ', name)
-    socket?.emit('roomuser', name);
+    socket?.emit('roomuser', {name, roomCode});
   }
 
   const joinRoom = async () => {

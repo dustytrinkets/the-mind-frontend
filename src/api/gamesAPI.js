@@ -1,10 +1,10 @@
 import axios from 'axios';
 import env from "react-dotenv";
 
-export const createGame = async (roomId) => {
+export const createGame = async (roomId, numPlayers) => {
   try {
       console.log('Creating Game')
-      const { data: game } = await axios.post(`${env.API_URL}/games`, {roomId: roomId});
+      const { data: game } = await axios.post(`${env.API_URL}/games`, {room: roomId, numPlayers });
       console.log('Created Game')
       return game;
   } catch (error) {
@@ -12,12 +12,12 @@ export const createGame = async (roomId) => {
   }
 }
 
-//change to get game by status
-export const getCreatedGameId = async (roomId) => {
+//change to get game by any status
+export const getActiveGameId = async (roomId) => {
   try {
-      console.log('Getting created game')
-      const { data: game } = await axios.get(`${env.API_URL}/games/created/${roomId}`);
-      console.log('Got created game')
+      console.log('Getting active game')
+      const { data: game } = await axios.get(`${env.API_URL}/games/active/${roomId}`);
+      console.log('Got active game', game)
       return game.id;
   } catch (error) {
       throw Error(error.message)

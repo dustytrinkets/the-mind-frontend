@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useLocation } from "react-router-dom";
 
 import './Game.component.css';
@@ -8,17 +8,24 @@ import { roomsAPI, gamesAPI } from '../../../api';
 
 const Game = () => {
   const params = useLocation();
-  const { gameId, roomId, roomCode, userId, userName } = params?.state;
+  console.log('params: ', params)
+  const { gameId, roomId, roomCode, userId, roomUsers, numbers, userName } = params?.state;
+  // const [numbers, setNumbers] = useState([])
 
-  const initGame = useCallback(async () => {
+  const updateStatuses = useCallback(async () => {
     await roomsAPI.updateRoomStatus(roomId, 'playing')
     await gamesAPI.updateGameStatus(gameId, 'active')
   })
 
-  //change game status to active and room to playing
   useEffect(() => {
-    initGame()
-  }, [initGame])
+    updateStatuses()
+  }, [updateStatuses])
+
+  // // TODO: get random numbers from backend
+  // const getRandomNumbers = useCallback(async () => {
+  //   const randomNumbers = await gamesAPI.getRandomNumbers(gameId)
+  //   setRandomNumbers(randomNumbers)
+  // })
 
 
   return (
@@ -28,6 +35,8 @@ const Game = () => {
       <div>roomId #{roomId}</div>
       <div>userId #{userId}</div>
       <div>userName #{userName}</div>
+      <div>roomUsers {roomUsers}</div>
+      <div>numbers #{numbers}</div>
       <h1>
         The Mind
       </h1>
