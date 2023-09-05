@@ -1,17 +1,75 @@
-.circle{
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background-color: #fff;
-    border: 1px solid #000;
-    margin: 0 auto;
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 50px;
-    font-weight: bold;
-    color: #000;
-    cursor: pointer;
-    transition: all 0.3s ease-in-out;
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle {
+  width: 60px;
+  height: 60px;
+  background: #D9D9D9;
+  border-radius: 50%;
+}
+
+.number{
+  color: black;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.the-mind-title{
+  font-size: 20px;
+  color: #D9D9D9;
+  margin-bottom: 10px;
+  position: absolute;
+  top: 8vh;
+}
+
+.room-code{
+  position: absolute;
+  top: 2vh;
+  width: 353px;
+  height: 46px;
+  left: 19px;
+  top: 19px;
+
+  background: rgba(203, 203, 203, 0.32);
+  border-radius: 5px;
+}
+
+.player{
+  position: relative;
+}
+
+.player .user-name, .user .user-name{
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+
+.last-played{
+  margin: 10vh 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.last-played-title{
+  font-size: 10px;
+  color: #D9D9D9;
+  margin-bottom: 10px;
+}
+
+.last-played .circle{
+  width: 100px;
+  height: 100px;
+}
+
+.user{
+  position:absolute;
+  top:80vh;
+}
+
+.user .circle{
+  width: 80px;
+  height: 80px;
 }

@@ -17,6 +17,7 @@ const Room = () => {
   const [name, setName] = useState(params?.state?.userName);
   const [creator, setCreator] = useState();
   const [roomUsers, setRoomUsers] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
   let navigate = useNavigate();
 
   const cookies = new Cookies();
@@ -26,7 +27,7 @@ const Room = () => {
     const roomUsers = await roomUsersAPI.getRoomUsers(roomId)
     console.log('roomUsers: ', roomUsers)
     setRoomUsers(roomUsers);
-  })
+  }, [roomId])
 
   // code for removing user if window closes
   // window.addEventListener("beforeunload", (ev) => {
@@ -38,15 +39,15 @@ const Room = () => {
   //   // return ev.returnValue = 'Are you sure you want to close?Help';
   // });
 
-  const loadGame = async ({gameId, numbers}) => {
-    console.log('GAME STARTED')
+  const loadGame = useCallback(async ({gameId, numbers}) => {
+    // console.log('GAME STARTED')
 
     if (!gameId) {
       gameId = await gamesAPI.getActiveGameId(roomId)
       numbers = await participationsAPI.getGameNumbers(gameId)
     }
-    console.log('+++++++---->  gameId: ', gameId)
-    console.log('+++++++---->  numbers: ', numbers)
+    // console.log('+++++++---->  gameId: ', gameId)
+    // console.log('+++++++---->  numbers: ', numbers)
     const path = generatePath('game/:gameId', { roomId, gameId: gameId });
     navigate(path, {
       state: {
@@ -59,16 +60,29 @@ const Room = () => {
         userName: name
       }
     });
-  }
+  }, [navigate, roomId, roomCode, userId, roomUsers, name])
 
-  const startNewGame = () => {
-    return async () => {
-      const game = await gamesAPI.createGame(roomId, roomUsers.length)
-      console.log('newGame: ', game)
-      console.log('numbers: ', game.numbers)
+  const startNewGame = useCallback(async () => {
+    try {
+      const game = await gamesAPI.createGame(roomId, roomUsers)
+      // console.log('newGame: ', game)
+      // console.log('---------numbers: ', game.numbers)
       socket.emit('startgame', { roomCode , id: game.id, numbers: game.numbers })
-      //the rest of users are not receiving the numbers like this
       loadGame({gameId: game.id, numbers: game.numbers})
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
+  }, [roomUsers])
+
+  const start = async () => {
+    try {
+      console.log('-----', roomUsers.length)
+      if (roomUsers.length < 2) {
+        throw Error('You need at least 2 players to start a game')
+      }
+      await startNewGame()
+    } catch (error) {
+      setErrorMessage(error.message)
     }
   }
 
@@ -77,7 +91,7 @@ const Room = () => {
     return () => {
       socket.off('startgame', loadGame);
     }
-  }, [fetchUsers, socket, name])
+  }, [socket, name, loadGame])
 
   const getRoomCreator = async () => {
     const creator = await roomsAPI.getRoomCreator(roomId)
@@ -128,9 +142,11 @@ const Room = () => {
         </table>
       </div>
       {creator?.id === userId && (
-        <button onClick={startNewGame()}>Start Game</button>
+        <button onClick={start}>Start Game</button>
       )}
+    {errorMessage && <div className="error"> {errorMessage} </div>}
     </div>
+    
   );
 }
 

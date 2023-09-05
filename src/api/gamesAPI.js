@@ -1,10 +1,10 @@
 import axios from 'axios';
 import env from "react-dotenv";
 
-export const createGame = async (roomId, numPlayers) => {
+export const createGame = async (roomId, users) => {
   try {
       console.log('Creating Game')
-      const { data: game } = await axios.post(`${env.API_URL}/games`, {room: roomId, numPlayers });
+      const { data: game } = await axios.post(`${env.API_URL}/games`, {room: roomId, numPlayers: users.length, players: users.map(user => user.id) });
       console.log('Created Game')
       return game;
   } catch (error) {
@@ -34,6 +34,17 @@ export const updateGameStatus = async (gameId, status) => {
       }
       console.log('Updated game status', game)
       return game;
+  } catch (error) {
+      throw Error(error.message)
+  }
+}
+
+export const getRandomNumbers = async (gameId) => {
+  try {
+      console.log('Getting random numbers')
+      const { data: numbers } = await axios.get(`${env.API_URL}/games/random/${gameId}`);
+      console.log('Got random numbers', numbers)
+      return numbers;
   } catch (error) {
       throw Error(error.message)
   }

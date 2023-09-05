@@ -4,42 +4,81 @@ import { useLocation } from "react-router-dom";
 import './Game.component.css';
 import { useEffect } from "react";
 
-import { roomsAPI, gamesAPI } from '../../../api';
+import { socketComponent } from '../../../socket';
+import { roomsAPI, gamesAPI, participationsAPI } from '../../../api';
+
 
 const Game = () => {
   const params = useLocation();
   console.log('params: ', params)
-  const { gameId, roomId, roomCode, userId, roomUsers, numbers, userName } = params?.state;
-  // const [numbers, setNumbers] = useState([])
+  const { gameId, roomId, roomCode, userId, roomUsers, userName } = params?.state;
+  const [randomNumber, setRandomNumber] = useState(null)
+  const [socket, setSocket] = useState(socketComponent);
 
-  const updateStatuses = useCallback(async () => {
+
+  const updateStatuses = async () => {
     await roomsAPI.updateRoomStatus(roomId, 'playing')
     await gamesAPI.updateGameStatus(gameId, 'active')
+  }
+
+  const getUserNumber = useCallback(async () => {
+    const participation = await participationsAPI.getParticipationByGameAndUser({userId, gameId})
+    setRandomNumber(participation.number)
+    console.log('----------number: ', participation.number)
   })
 
-  useEffect(() => {
-    updateStatuses()
-  }, [updateStatuses])
+  const sendNumber = async () => {
+    console.log('sendNumber')
+    socket.emit('sendnumber', { userName , userId, randomNumber })
+  }
 
-  // // TODO: get random numbers from backend
-  // const getRandomNumbers = useCallback(async () => {
-  //   const randomNumbers = await gamesAPI.getRandomNumbers(gameId)
-  //   setRandomNumbers(randomNumbers)
-  // })
+  useEffect(() => {
+    getUserNumber()
+    updateStatuses()
+  }, [gameId, roomId, updateStatuses])
+
+
+  useEffect(() => {
+    const newSocket = socketComponent;
+    setSocket(newSocket);
+  }, [setSocket])
 
 
   return (
     <div className="Screen">
-      <div>gameId #{gameId}</div>
-      <div>roomCode #{roomCode}</div>
-      <div>roomId #{roomId}</div>
-      <div>userId #{userId}</div>
-      <div>userName #{userName}</div>
-      <div>roomUsers {roomUsers}</div>
-      <div>numbers #{numbers}</div>
-      <h1>
-        The Mind
-      </h1>
+      <div className="room-code flex-center">
+        Room #{roomCode}
+      </div>
+      <div className='the-mind-title'>
+        <h1>
+          The Mind
+        </h1>
+      </div>
+      <div className="players flex-center">
+        {roomUsers.map((user, index) => (user !== userName) ?
+        <div className='player'>
+          <div key={index}>
+            <div className='user-name'>{user}</div>
+          </div>
+          <div className='circle flex-center'>
+            <div className='number'>?</div>
+          </div>
+        </div>: null)}
+      </div>
+
+      <div className='last-played flex-center'>
+        <div className='last-played-title'>Last number played</div>
+        <div className='circle flex-center'>
+          <div className='number'>?</div>
+        </div>
+      </div>
+
+      <div className="user">
+        <div className='user-name'>{userName}</div>
+        <div className='circle flex-center' onClick={sendNumber}>
+          <div className='number'>{randomNumber}</div>
+        </div>
+      </div>
     </div>
   );
 }

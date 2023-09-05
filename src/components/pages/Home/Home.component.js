@@ -24,13 +24,6 @@ const Home = () => {
 
   const routeChange = (room, user) => {
     try {
-      if (!room.code) {
-        throw Error('Room code is required');
-      }
-      //avoid enter if room status is playing
-      if (room.status === 'playing') {
-        throw Error('Try joining in the next round. A game is already in progress');
-      }
 
       console.log('entering route change with room -->', room.code)
       const path = generatePath('/room/:id', { id: room.code });
@@ -81,6 +74,17 @@ const Home = () => {
         return
       }
       const room = await roomsAPI.getRoomByCode(roomCode)
+      const users = await roomUsersAPI.getRoomUsers(room.id)
+      if (!room.code) {
+        throw Error('Room code is required');
+      }
+      if (room.status === 'playing') {
+        throw Error('Try joining in the next round. A game is already in progress');
+      }
+
+      if (users.some(user => user.name.toLowerCase() === name.toLowerCase())) {
+        throw Error('Name already exists in room');
+      }
       const user = await usersAPI.createUser(name)
       await createRoomUser({room, user})
       console.log(`Entering room ${roomCode}`)
@@ -111,15 +115,14 @@ const Home = () => {
       />
       {!joinRoomActive? <button onClick={generateAndJoinRoom}>
         Create New Room
-      </button> : null}
-      {joinRoomActive? <input
+      </button> : <input
         className="generic-input"
         type="text"
         id="roomCode"
         name="roomCode"
         onChange={roomCodeChange}
         placeholder="Enter room code"
-      />: null}
+      />}
       <button onClick={joinRoom}>
         Join Room
       </button>
