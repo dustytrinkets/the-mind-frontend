@@ -11,49 +11,81 @@ import { roomsAPI, gamesAPI, participationsAPI } from '../../../api';
 const Game = () => {
   const params = useLocation();
   const { gameId, roomId, roomCode, userId, roomUsers, userName } = params?.state;
-  const [randomNumber, setRandomNumber] = useState(null)
+  const [userRandomNumber, setUserRandomNumber] = useState(0)
   const [socket, setSocket] = useState(socketComponent);
-  const [lastNumberPlayed, setLastNumberPlayed] = useState(null)
+  const [currentNumberPlayed, setCurrentNumberPlayed] = useState(0)
   const [order, setOrder] = useState(0)
+  const [gameStatus, setGameStatus] = useState('active')
+  const [playedNumbers, setPlayedNumbers] = useState([])
 
-
-  const updateStatuses = async () => {
-    await roomsAPI.updateRoomStatus(roomId, 'playing')
-    await gamesAPI.updateGameStatus(gameId, 'active')
-  }
+  const updateStatuses = useCallback(async ({roomStatus, gameStatus}) => {
+    await roomsAPI.updateRoomStatus(roomId, roomStatus)
+    await gamesAPI.updateGameStatus(gameId, gameStatus)
+  }, [roomId, gameId])
 
   const getUserNumber = useCallback(async () => {
     const participation = await participationsAPI.getParticipationByGameAndUser({userId, gameId})
-    setRandomNumber(participation.number)
-  }, [gameId, userId])
+    setUserRandomNumber(participation.number)
+  }, [gameId, userId, setUserRandomNumber])
 
-  const revealUserNumber = useCallback(({ userIdPlayed, userNamePlayed, numberPlayed }) => {
-    console.log('revealUserNumber: ', { userIdPlayed, userNamePlayed, numberPlayed })
-    if (userIdPlayed === userId) {
+  const revealUserNumber = useCallback(({ userIdSent, userNameSent, numberSent }) => {
+    // console.log('revealUserNumber: ', { userIdPlayed, userNamePlayed, currentNumberPlayed })
+    if (userIdSent === userId) {
       return
     }
-    const userDiv = document.getElementById(userNamePlayed)
+    const userDiv = document.getElementById(userNameSent)
     const numberDiv = userDiv.getElementsByClassName('number')[0]
-    numberDiv.innerHTML = numberPlayed
+    numberDiv.innerHTML = numberSent
   }, [userId])
 
-
-  const revealPlay = useCallback(({ roomId: currentRoomId, userId: userIdPlayed, userName: userNamePlayed, randomNumber: numberPlayed}) => {
+  const revealPlay = useCallback(({ roomIdSent, userIdSent, userNameSent, numberSent}) => {
     // todo check if this can be done using the socket rooms
-    if (currentRoomId !== roomId) {
+    if (roomIdSent !== roomId) {
       return
     }
-    revealUserNumber({ userIdPlayed, userNamePlayed, numberPlayed })
-    setLastNumberPlayed(numberPlayed)
-    console.log('order: ', order)
+    revealUserNumber({ userIdSent, userNameSent, numberSent })
+    setCurrentNumberPlayed(numberSent)
     setOrder(order + 1)
-  }, [roomId, order, revealUserNumber])
+    if ( userRandomNumber < numberSent && !playedNumbers.includes(userRandomNumber)) {
+      console.warn('LOSE', { roomId, roomCode, id: gameId })
+      socket.emit('lose', { roomId, roomCode, id: gameId })
+    }
+    setPlayedNumbers([...playedNumbers, numberSent])
+    if (playedNumbers.length === roomUsers.length - 1) {
+      console.warn('WIN', { roomId, roomCode, id: gameId })
+      socket.emit('win', { roomId, roomCode, id: gameId })
+    }
+  }, [roomId, revealUserNumber, order, userRandomNumber, playedNumbers, socket, roomCode, gameId])
 
   const sendNumber = async () => {
-    socket.emit('sendnumber', { roomId, userName , userId, randomNumber })
-    console.log('sendnumber: ', {  gameId, userId, order })
+    if (playedNumbers.includes(userRandomNumber)) {
+      return
+    }
+    socket.emit('sendnumber', { roomId, userName , userId, userRandomNumber })
     await participationsAPI.updateParticipation({ gameId, userId, order })
   }
+
+  const gameOver = useCallback( async ({ roomIdSent, gameIdSent }) => {
+    // console.warn('gameOver: ', { roomIdSent, gameIdSent })
+    // todo check if this can be done using the socket rooms
+    if (roomIdSent !== roomId) {
+      return
+    }
+    setGameStatus('lose')
+    await updateStatuses({ roomStatus: 'created', gameStatus: 'lose'})
+    // todo: set room back to available and move users view to it
+  }, [roomId, updateStatuses])
+
+  const gameSuccess = useCallback( async ({ roomIdSent, gameIdSent }) => {
+    // console.warn('gameSuccess: ', { roomIdSent, gameIdSent })
+    // todo check if this can be done using the socket rooms
+    if (roomIdSent !== roomId) {
+      return
+    }
+    setGameStatus('win')
+    await updateStatuses({ roomStatus: 'created', gameStatus: 'win'})
+  }, [roomId, updateStatuses])
+
 
   useEffect(() => {
     socket.on('sendnumber', revealPlay)
@@ -62,10 +94,27 @@ const Game = () => {
     }
   }, [socket, revealPlay])
 
+
   useEffect(() => {
+    socket.on('lose', gameOver)
+    return () => {
+      socket.off('lose', gameOver);
+    }
+  }, [socket, revealPlay, gameOver])
+
+  useEffect(() => {
+    socket.on('win', gameSuccess)
+    return () => {
+      socket.off('win', gameSuccess);
+    }
+  }, [socket, revealPlay, gameSuccess])
+
+
+  useEffect(() => {
+    console.log('------Game useEffect')
     getUserNumber()
-    updateStatuses()
-  }, [gameId, roomId, updateStatuses])
+    updateStatuses({ roomStatus: 'playing', gameStatus: 'active'})
+  }, [currentNumberPlayed, gameId, getUserNumber, roomId, updateStatuses, userRandomNumber])
 
 
   useEffect(() => {
@@ -100,7 +149,7 @@ const Game = () => {
         <div className='last-played-title'>Last number played</div>
         <div className='circle flex-center'>
           <div className='number'>
-            {lastNumberPlayed ? lastNumberPlayed : '?'}
+            {currentNumberPlayed ? currentNumberPlayed : '?'}
           </div>
         </div>
       </div>
@@ -108,8 +157,11 @@ const Game = () => {
       <div className="user">
         <div className='user-name'>{userName}</div>
         <div className='circle flex-center' onClick={sendNumber}>
-          <div className='number'>{randomNumber}</div>
+          <div className='number'>{userRandomNumber}</div>
         </div>
+      </div>
+      <div>
+        {gameStatus !== 'active' ? <h1>{gameStatus}</h1> : ''}
       </div>
     </div>
   );
