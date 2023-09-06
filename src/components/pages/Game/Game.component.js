@@ -10,10 +10,11 @@ import { roomsAPI, gamesAPI, participationsAPI } from '../../../api';
 
 const Game = () => {
   const params = useLocation();
-  console.log('params: ', params)
   const { gameId, roomId, roomCode, userId, roomUsers, userName } = params?.state;
   const [randomNumber, setRandomNumber] = useState(null)
   const [socket, setSocket] = useState(socketComponent);
+  const [lastNumberPlayed, setLastNumberPlayed] = useState(null)
+  const [order, setOrder] = useState(0)
 
 
   const updateStatuses = async () => {
@@ -24,27 +25,42 @@ const Game = () => {
   const getUserNumber = useCallback(async () => {
     const participation = await participationsAPI.getParticipationByGameAndUser({userId, gameId})
     setRandomNumber(participation.number)
-    console.log('----------number: ', participation.number)
-  })
+  }, [gameId, userId])
 
-  const revealUserNummber = useCallback(({ roomId: currentRoomId, userName, randomNumber }) => {
+  const revealUserNumber = useCallback(({ userIdPlayed, userNamePlayed, numberPlayed }) => {
+    console.log('revealUserNumber: ', { userIdPlayed, userNamePlayed, numberPlayed })
+    if (userIdPlayed === userId) {
+      return
+    }
+    const userDiv = document.getElementById(userNamePlayed)
+    const numberDiv = userDiv.getElementsByClassName('number')[0]
+    numberDiv.innerHTML = numberPlayed
+  }, [userId])
+
+
+  const revealPlay = useCallback(({ roomId: currentRoomId, userId: userIdPlayed, userName: userNamePlayed, randomNumber: numberPlayed}) => {
     // todo check if this can be done using the socket rooms
     if (currentRoomId !== roomId) {
       return
     }
-    console.log('revealUserNummber: ', { roomCode, userName, userId, randomNumber })
-  }, [roomId, roomCode, userId])
+    revealUserNumber({ userIdPlayed, userNamePlayed, numberPlayed })
+    setLastNumberPlayed(numberPlayed)
+    console.log('order: ', order)
+    setOrder(order + 1)
+  }, [roomId, order, revealUserNumber])
 
   const sendNumber = async () => {
     socket.emit('sendnumber', { roomId, userName , userId, randomNumber })
+    console.log('sendnumber: ', {  gameId, userId, order })
+    await participationsAPI.updateParticipation({ gameId, userId, order })
   }
 
   useEffect(() => {
-    socket.on('sendnumber', revealUserNummber)
+    socket.on('sendnumber', revealPlay)
     return () => {
-      socket.off('sendnumber', revealUserNummber);
+      socket.off('sendnumber', revealPlay);
     }
-  }, [socket, revealUserNummber])
+  }, [socket, revealPlay])
 
   useEffect(() => {
     getUserNumber()
@@ -70,7 +86,7 @@ const Game = () => {
       </div>
       <div className="players flex-center">
         {roomUsers.map((user, index) => (user !== userName) ?
-        <div className='player'>
+        <div className='player' id={user}>
           <div key={index}>
             <div className='user-name'>{user}</div>
           </div>
@@ -83,7 +99,9 @@ const Game = () => {
       <div className='last-played flex-center'>
         <div className='last-played-title'>Last number played</div>
         <div className='circle flex-center'>
-          <div className='number'>?</div>
+          <div className='number'>
+            {lastNumberPlayed ? lastNumberPlayed : '?'}
+          </div>
         </div>
       </div>
 

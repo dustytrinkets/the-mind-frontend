@@ -22,3 +22,15 @@ export const getParticipationByGameAndUser = async ({gameId, userId}) => {
       throw Error(error.message)
   }
 }
+
+export const updateParticipation = async ({ gameId, userId, order }) => {
+  try {
+      console.log(`Setting play for user ${userId}, game ${gameId}`)
+      const { data: participation } = await axios.put(`${env.API_URL}/participations`, { game_id: gameId, user_id: userId, order });
+      console.log('Set play for user', participation)
+      return participation;
+  }
+  catch (error) {
+      throw Error(error.message)
+  }
+}
