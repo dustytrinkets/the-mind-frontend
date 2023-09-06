@@ -23,7 +23,11 @@ const Room = () => {
   const cookies = new Cookies();
   cookies.set('userId', userId, { path: '/' });
 
-  const fetchUsers = useCallback(async ()=> {
+  const fetchUsers = useCallback(async ({roomId: currentRoomId})=> {
+    // todo check if this can be done using the socket rooms
+    if (currentRoomId !== roomId) {
+      return
+    }
     const roomUsers = await roomUsersAPI.getRoomUsers(roomId)
     console.log('roomUsers: ', roomUsers)
     setRoomUsers(roomUsers);
@@ -39,9 +43,13 @@ const Room = () => {
   //   // return ev.returnValue = 'Are you sure you want to close?Help';
   // });
 
-  const loadGame = useCallback(async ({gameId, numbers}) => {
+  const loadGame = useCallback(async ({roomId: currentRoomId, gameId, numbers}) => {
     // console.log('GAME STARTED')
-
+    console.log('loadGame: ', { roomId, currentRoomId })
+    // todo check if this can be done using the socket rooms
+    if (currentRoomId !== roomId) {
+      return
+    }
     if (!gameId) {
       gameId = await gamesAPI.getActiveGameId(roomId)
       numbers = await participationsAPI.getGameNumbers(gameId)
@@ -67,8 +75,8 @@ const Room = () => {
       const game = await gamesAPI.createGame(roomId, roomUsers)
       // console.log('newGame: ', game)
       // console.log('---------numbers: ', game.numbers)
-      socket.emit('startgame', { roomCode , id: game.id, numbers: game.numbers })
-      loadGame({gameId: game.id, numbers: game.numbers})
+      socket.emit('startgame', { roomId, roomCode , id: game.id, numbers: game.numbers })
+      loadGame({roomId, gameId: game.id, numbers: game.numbers})
     } catch (error) {
       setErrorMessage(error.message)
     }
@@ -116,7 +124,7 @@ const Room = () => {
       navigate(path);
     }
     setName(name);
-    fetchUsers();
+    fetchUsers({roomId});
     getRoomCreator()
   }, [name, navigate]);
 

@@ -48,24 +48,24 @@ const Home = () => {
     }
   };
 
+  const sendNameSocket = ({roomId, name})=>{
+    console.log('sendNameSocket: ', roomId, name)
+    socket?.emit('roomuser', {roomId, name, roomCode});
+  }
+
   const generateAndJoinRoom = async () => {
     try {
       const user = await usersAPI.createUser(name)
       const room = await roomsAPI.createRoom(user.id)
       await createRoomUser({room, user})
       console.log('-------userid: ', user)
-      sendNameSocket(name)
+      sendNameSocket({roomId: room.id, name})
       setRoomCode(room.code)
       routeChange(room, user)
     } catch (error) {
       setErrorMessage(error.message)
     }
   };
-
-  const sendNameSocket = (name)=>{
-    console.log('sendNameSocket: ', name)
-    socket?.emit('roomuser', {name, roomCode});
-  }
 
   const joinRoom = async () => {
     try {
@@ -88,7 +88,7 @@ const Home = () => {
       const user = await usersAPI.createUser(name)
       await createRoomUser({room, user})
       console.log(`Entering room ${roomCode}`)
-      sendNameSocket(name)
+      sendNameSocket({roomId: room.id, name})
       routeChange(room, user)
     } catch (error) {
       setErrorMessage(error.message)

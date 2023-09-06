@@ -27,10 +27,24 @@ const Game = () => {
     console.log('----------number: ', participation.number)
   })
 
+  const revealUserNummber = useCallback(({ roomId: currentRoomId, userName, randomNumber }) => {
+    // todo check if this can be done using the socket rooms
+    if (currentRoomId !== roomId) {
+      return
+    }
+    console.log('revealUserNummber: ', { roomCode, userName, userId, randomNumber })
+  }, [roomId, roomCode, userId])
+
   const sendNumber = async () => {
-    console.log('sendNumber')
-    socket.emit('sendnumber', { userName , userId, randomNumber })
+    socket.emit('sendnumber', { roomId, userName , userId, randomNumber })
   }
+
+  useEffect(() => {
+    socket.on('sendnumber', revealUserNummber)
+    return () => {
+      socket.off('sendnumber', revealUserNummber);
+    }
+  }, [socket, revealUserNummber])
 
   useEffect(() => {
     getUserNumber()
