@@ -11,12 +11,12 @@ import { roomsAPI, gamesAPI, participationsAPI } from '../../../api';
 const Game = () => {
   const params = useLocation();
   const { gameId, roomId, roomCode, userId, roomUsers, userName } = params?.state;
-  const [userRandomNumber, setUserRandomNumber] = useState(0)
+  const [userRandomNumber, setUserRandomNumber] = useState(1)
   const [socket, setSocket] = useState(socketComponent);
   const [currentNumberPlayed, setCurrentNumberPlayed] = useState(0)
   const [order, setOrder] = useState(0)
-  const [gameStatus, setGameStatus] = useState('active')
   const [playedNumbers, setPlayedNumbers] = useState([])
+  const [gameStatus, setGameStatus] = useState('active')
 
   const updateStatuses = useCallback(async ({roomStatus, gameStatus}) => {
     await roomsAPI.updateRoomStatus(roomId, roomStatus)
@@ -49,15 +49,22 @@ const Game = () => {
     if ( userRandomNumber < numberSent && !playedNumbers.includes(userRandomNumber)) {
       console.warn('LOSE', { roomId, roomCode, id: gameId })
       socket.emit('lose', { roomId, roomCode, id: gameId })
+      return
     }
     setPlayedNumbers([...playedNumbers, numberSent])
     if (playedNumbers.length === roomUsers.length - 1) {
       console.warn('WIN', { roomId, roomCode, id: gameId })
       socket.emit('win', { roomId, roomCode, id: gameId })
     }
-  }, [roomId, revealUserNumber, order, userRandomNumber, playedNumbers, socket, roomCode, gameId])
+  }, [roomId, revealUserNumber, order, userRandomNumber, playedNumbers, roomUsers.length, roomCode, gameId, socket])
 
-  const sendNumber = async () => {
+  const sendNumber = async (e) => {
+    if (gameStatus !== 'active') {
+      return
+    }
+    const userDiv = e.target
+    userDiv.classList.add('played')
+    userDiv.removeEventListener('click', sendNumber)
     if (playedNumbers.includes(userRandomNumber)) {
       return
     }
@@ -65,27 +72,56 @@ const Game = () => {
     await participationsAPI.updateParticipation({ gameId, userId, order })
   }
 
-  const gameOver = useCallback( async ({ roomIdSent, gameIdSent }) => {
-    // console.warn('gameOver: ', { roomIdSent, gameIdSent })
+  const uncoverUserNumbers = useCallback(async () => {
+    const participations = await participationsAPI.getParticipationNumbersByGameId({ gameId })
+    console.log('participation: ', participations)
+    participations.forEach(participation => {
+      if (userName !== participation.user.name) {
+        const userDiv = document.getElementById(participation.user.name)
+        const numberDiv = userDiv.getElementsByClassName('number')[0]
+        numberDiv.innerHTML = participation.number
+        // todo find highest and not null order
+        const highestOrderParticipation = participations.filter(participation => participation.order !== null).reduce((prev, current) => (prev.order > current.order) ? prev : current)
+        console.log('highestOrder: ', highestOrderParticipation)
+        const lastUserDiv = document.getElementById(highestOrderParticipation?.user.name)
+        const lastNumberCircle = lastUserDiv?.getElementsByClassName('circle')[0]
+        console.log('.--------------------------: ', lastNumberCircle)
+        lastNumberCircle?.classList.add('lose-pointer')
+      }
+    })
+
+  }, [gameId, userName])
+
+  const gameOver = useCallback( async ({ roomIdSent }) => {
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
     }
     setGameStatus('lose')
-    await updateStatuses({ roomStatus: 'created', gameStatus: 'lose'})
-    // todo: set room back to available and move users view to it
+    const screen = document.getElementsByClassName('Screen')[0]
+    screen.classList.add('lose')
+    await uncoverUserNumbers()
+    await updateStatuses({ roomStatus: 'finished', gameStatus: 'lose'})
   }, [roomId, updateStatuses])
 
-  const gameSuccess = useCallback( async ({ roomIdSent, gameIdSent }) => {
-    // console.warn('gameSuccess: ', { roomIdSent, gameIdSent })
+  const gameSuccess = useCallback( async ({ roomIdSent }) => {
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
     }
     setGameStatus('win')
-    await updateStatuses({ roomStatus: 'created', gameStatus: 'win'})
+    const screen = document.getElementsByClassName('Screen')[0]
+    screen.classList.add('win')
+    await updateStatuses({ roomStatus: 'finished', gameStatus: 'win'})
   }, [roomId, updateStatuses])
 
+  const retry = async () => {
+    // todo retry logic
+  }
+
+  const backToRoom = async () => {
+    // todo back to room logic
+  }
 
   useEffect(() => {
     socket.on('sendnumber', revealPlay)
@@ -154,15 +190,19 @@ const Game = () => {
         </div>
       </div>
 
+      
       <div className="user">
         <div className='user-name'>{userName}</div>
         <div className='circle flex-center' onClick={sendNumber}>
           <div className='number'>{userRandomNumber}</div>
         </div>
       </div>
-      <div>
-        {gameStatus !== 'active' ? <h1>{gameStatus}</h1> : ''}
-      </div>
+      {gameStatus !== 'active' &&
+      <div className="action-buttons flex-center">
+        <button onClick={retry}>{gameStatus === 'win' ? 'New game' : 'Try again'}</button>
+        <button onClick={backToRoom}>Back to room</button>
+      </div>}
+
     </div>
   );
 }

@@ -52,10 +52,7 @@ const Room = () => {
     }
     if (!gameId) {
       gameId = await gamesAPI.getActiveGameId(roomId)
-      numbers = await participationsAPI.getGameNumbers(gameId)
     }
-    // console.log('+++++++---->  gameId: ', gameId)
-    // console.log('+++++++---->  numbers: ', numbers)
     const path = generatePath('game/:gameId', { roomId, gameId: gameId });
     navigate(path, {
       state: {
@@ -64,7 +61,6 @@ const Room = () => {
         gameId,
         userId,
         roomUsers: roomUsers.map(user => user.name),
-        numbers,
         userName: name
       }
     });
