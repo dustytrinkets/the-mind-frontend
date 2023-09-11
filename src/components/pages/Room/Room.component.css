@@ -38,3 +38,12 @@ table tbody tr:nth-child(odd) {
   font-weight: bold;
   color: #56d683;
 }
+
+.info-bubble{
+  position: absolute;
+  background-color: rgba(224, 224, 224, 0.508);
+  border:1px solid white;
+  padding: 0.5em;
+  border-radius: 5px;
+  top: 20vh;
+}

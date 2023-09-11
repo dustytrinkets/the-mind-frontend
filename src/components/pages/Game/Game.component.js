@@ -7,24 +7,28 @@ import { useEffect } from "react";
 import { socketComponent } from '../../../socket';
 import { roomsAPI, gamesAPI, participationsAPI } from '../../../api';
 
+import { BiSolidHome } from 'react-icons/bi';
+import { PiCirclesThreePlusBold } from 'react-icons/pi'
+import { MdLoop } from 'react-icons/md'
+
 
 const Game = () => {
   const params = useLocation();
-  const { gameId, roomId, roomCode, userId, roomUsers, userName } = params?.state;
-  const [userRandomNumber, setUserRandomNumber] = useState(1)
+  const { gameId, roomId, roomCode, userId, roomUsers, userName, creator } = params?.state;
+  const [userRandomNumber, setUserRandomNumber] = useState(0)
   const [socket, setSocket] = useState(socketComponent);
   const [currentNumberPlayed, setCurrentNumberPlayed] = useState(0)
   const [order, setOrder] = useState(0)
   const [playedNumbers, setPlayedNumbers] = useState([])
   const [gameStatus, setGameStatus] = useState('active')
 
-  const updateStatuses = useCallback(async ({roomStatus, gameStatus}) => {
+  const updateStatuses = useCallback(async ({ roomStatus, gameStatus }) => {
     await roomsAPI.updateRoomStatus(roomId, roomStatus)
     await gamesAPI.updateGameStatus(gameId, gameStatus)
   }, [roomId, gameId])
 
   const getUserNumber = useCallback(async () => {
-    const participation = await participationsAPI.getParticipationByGameAndUser({userId, gameId})
+    const participation = await participationsAPI.getParticipationByGameAndUser({ userId, gameId })
     setUserRandomNumber(participation.number)
   }, [gameId, userId, setUserRandomNumber])
 
@@ -38,7 +42,7 @@ const Game = () => {
     numberDiv.innerHTML = numberSent
   }, [userId])
 
-  const revealPlay = useCallback(({ roomIdSent, userIdSent, userNameSent, numberSent}) => {
+  const revealPlay = useCallback(({ roomIdSent, userIdSent, userNameSent, numberSent }) => {
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
@@ -46,7 +50,7 @@ const Game = () => {
     revealUserNumber({ userIdSent, userNameSent, numberSent })
     setCurrentNumberPlayed(numberSent)
     setOrder(order + 1)
-    if ( userRandomNumber < numberSent && !playedNumbers.includes(userRandomNumber)) {
+    if (userRandomNumber < numberSent && !playedNumbers.includes(userRandomNumber)) {
       console.warn('LOSE', { roomId, roomCode, id: gameId })
       socket.emit('lose', { roomId, roomCode, id: gameId })
       return
@@ -68,7 +72,7 @@ const Game = () => {
     if (playedNumbers.includes(userRandomNumber)) {
       return
     }
-    socket.emit('sendnumber', { roomId, userName , userId, userRandomNumber })
+    socket.emit('sendnumber', { roomId, userName, userId, userRandomNumber })
     await participationsAPI.updateParticipation({ gameId, userId, order })
   }
 
@@ -92,7 +96,7 @@ const Game = () => {
 
   }, [gameId, userName])
 
-  const gameOver = useCallback( async ({ roomIdSent }) => {
+  const gameOver = useCallback(async ({ roomIdSent }) => {
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
@@ -101,10 +105,10 @@ const Game = () => {
     const screen = document.getElementsByClassName('Screen')[0]
     screen.classList.add('lose')
     await uncoverUserNumbers()
-    await updateStatuses({ roomStatus: 'finished', gameStatus: 'lose'})
+    await updateStatuses({ roomStatus: 'finished', gameStatus: 'lose' })
   }, [roomId, updateStatuses])
 
-  const gameSuccess = useCallback( async ({ roomIdSent }) => {
+  const gameSuccess = useCallback(async ({ roomIdSent }) => {
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
@@ -112,15 +116,19 @@ const Game = () => {
     setGameStatus('win')
     const screen = document.getElementsByClassName('Screen')[0]
     screen.classList.add('win')
-    await updateStatuses({ roomStatus: 'finished', gameStatus: 'win'})
+    await updateStatuses({ roomStatus: 'finished', gameStatus: 'win' })
   }, [roomId, updateStatuses])
 
-  const retry = async () => {
+  const newGame = async () => {
     // todo retry logic
   }
 
   const backToRoom = async () => {
     // todo back to room logic
+  }
+
+  const backToHome = async () => {
+
   }
 
   useEffect(() => {
@@ -147,9 +155,9 @@ const Game = () => {
 
 
   useEffect(() => {
-    console.log('------Game useEffect')
+    console.log('------creator', creator)
     getUserNumber()
-    updateStatuses({ roomStatus: 'playing', gameStatus: 'active'})
+    updateStatuses({ roomStatus: 'playing', gameStatus: 'active' })
   }, [currentNumberPlayed, gameId, getUserNumber, roomId, updateStatuses, userRandomNumber])
 
 
@@ -171,14 +179,14 @@ const Game = () => {
       </div>
       <div className="players flex-center">
         {roomUsers.map((user, index) => (user !== userName) ?
-        <div className='player' id={user}>
-          <div key={index}>
-            <div className='user-name'>{user}</div>
-          </div>
-          <div className='circle flex-center'>
-            <div className='number'>?</div>
-          </div>
-        </div>: null)}
+          <div className='player' id={user}>
+            <div key={index}>
+              <div className='user-name'>{user}</div>
+            </div>
+            <div className='circle flex-center'>
+              <div className='number'>?</div>
+            </div>
+          </div> : null)}
       </div>
 
       <div className='last-played flex-center'>
@@ -190,7 +198,6 @@ const Game = () => {
         </div>
       </div>
 
-      
       <div className="user">
         <div className='user-name'>{userName}</div>
         <div className='circle flex-center' onClick={sendNumber}>
@@ -198,10 +205,21 @@ const Game = () => {
         </div>
       </div>
       {gameStatus !== 'active' &&
-      <div className="action-buttons flex-center">
-        <button onClick={retry}>{gameStatus === 'win' ? 'New game' : 'Try again'}</button>
-        <button onClick={backToRoom}>Back to room</button>
-      </div>}
+        <div className={gameStatus === 'win' ? 'win-action-bg action-buttons flex-center' : 'lose-action-bg action-buttons flex-center'}>
+          {creator.id === userId && (
+            <>
+              <button className="circular-button" onClick={newGame}>
+                <MdLoop />
+              </button>
+              <button className="circular-button" onClick={backToRoom}>
+                <PiCirclesThreePlusBold />
+              </button>
+            </>
+          )}
+          <button className="circular-button" onClick={backToHome}>
+            <BiSolidHome />
+          </button>
+        </div>}
 
     </div>
   );

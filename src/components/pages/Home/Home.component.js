@@ -6,6 +6,8 @@ import './Home.component.css';
 import { usersAPI, roomsAPI, roomUsersAPI } from '../../../api';
 import { socketComponent } from '../../../socket';
 
+import { PiCirclesThreePlusBold } from 'react-icons/pi'
+
 const Home = () => {
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
@@ -124,6 +126,7 @@ const Home = () => {
         placeholder="Enter room code"
       />}
       <button onClick={joinRoom}>
+        <PiCirclesThreePlusBold /> 
         Join Room
       </button>
       {errorMessage && <div className="error"> {errorMessage} </div>}

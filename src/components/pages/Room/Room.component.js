@@ -6,7 +6,9 @@ import Cookies from 'universal-cookie';
 import './Room.component.css';
 
 import { socketComponent } from '../../../socket';
-import { roomUsersAPI, roomsAPI, gamesAPI, participationsAPI } from '../../../api';
+import { roomUsersAPI, roomsAPI, gamesAPI } from '../../../api';
+
+import { PiCirclesThreePlusBold } from 'react-icons/pi'
 
 const Room = () => {
   const { id: roomCode } = useParams();
@@ -18,6 +20,7 @@ const Room = () => {
   const [creator, setCreator] = useState();
   const [roomUsers, setRoomUsers] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   let navigate = useNavigate();
 
   const cookies = new Cookies();
@@ -43,7 +46,7 @@ const Room = () => {
   //   // return ev.returnValue = 'Are you sure you want to close?Help';
   // });
 
-  const loadGame = useCallback(async ({roomId: currentRoomId, gameId, numbers}) => {
+  const loadGame = useCallback(async ({roomId: currentRoomId, gameId}) => {
     // console.log('GAME STARTED')
     console.log('loadGame: ', { roomId, currentRoomId })
     // todo check if this can be done using the socket rooms
@@ -60,19 +63,27 @@ const Room = () => {
         roomCode,
         gameId,
         userId,
+        creator,
         roomUsers: roomUsers.map(user => user.name),
         userName: name
       }
     });
   }, [navigate, roomId, roomCode, userId, roomUsers, name])
 
+  const copyCodeToClipboard = () => {
+    navigator.clipboard.writeText(roomCode);
+        setInfoMessage(`Room code copied to clipboard`)
+    setTimeout(() => {
+    setInfoMessage(null)
+      
+    }, 2000);
+  }
+
   const startNewGame = useCallback(async () => {
     try {
       const game = await gamesAPI.createGame(roomId, roomUsers)
-      // console.log('newGame: ', game)
-      // console.log('---------numbers: ', game.numbers)
-      socket.emit('startgame', { roomId, roomCode , id: game.id, numbers: game.numbers })
-      loadGame({roomId, gameId: game.id, numbers: game.numbers})
+      socket.emit('startgame', { roomId, roomCode , id: game.id })
+      loadGame({roomId, gameId: game.id})
     } catch (error) {
       setErrorMessage(error.message)
     }
@@ -129,11 +140,14 @@ const Room = () => {
       <h1>
         The Mind
       </h1>
+      <h2>
+        <PiCirclesThreePlusBold />
+      </h2>
       <div className='table-container'>
         <table>
           <thead>
             <tr>
-              <th scope="col" align="center">Room #{roomCode}</th>
+              <th scope="col" align="center" onClick={copyCodeToClipboard}>#{roomCode}</th>
             </tr>
           </thead>
           <tbody>
@@ -149,6 +163,7 @@ const Room = () => {
         <button onClick={start}>Start Game</button>
       )}
     {errorMessage && <div className="error"> {errorMessage} </div>}
+    {infoMessage && <div className="info-bubble"> {infoMessage} </div>}
     </div>
     
   );
