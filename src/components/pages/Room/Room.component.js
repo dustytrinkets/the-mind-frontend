@@ -73,10 +73,7 @@ const Room = () => {
   const copyCodeToClipboard = () => {
     navigator.clipboard.writeText(roomCode);
         setInfoMessage(`Room code copied to clipboard`)
-    setTimeout(() => {
-    setInfoMessage(null)
-      
-    }, 2000);
+    setTimeout(() => {setInfoMessage(null)}, 2000);
   }
 
   const startNewGame = useCallback(async () => {
