@@ -26,8 +26,6 @@ const Home = () => {
 
   const routeChange = (room, user) => {
     try {
-
-      console.log('entering route change with room -->', room.code)
       const path = generatePath('/room/:id', { id: room.code });
       navigate(path, {
         id: room.code,
@@ -51,7 +49,6 @@ const Home = () => {
   };
 
   const sendNameSocket = ({roomId, name})=>{
-    console.log('sendNameSocket: ', roomId, name)
     socket?.emit('roomuser', {roomId, name, roomCode});
   }
 
@@ -60,7 +57,6 @@ const Home = () => {
       const user = await usersAPI.createUser(name)
       const room = await roomsAPI.createRoom(user.id)
       await createRoomUser({room, user})
-      console.log('-------userid: ', user)
       sendNameSocket({roomId: room.id, name})
       setRoomCode(room.code)
       routeChange(room, user)
@@ -89,7 +85,6 @@ const Home = () => {
       }
       const user = await usersAPI.createUser(name)
       await createRoomUser({room, user})
-      console.log(`Entering room ${roomCode}`)
       sendNameSocket({roomId: room.id, name})
       routeChange(room, user)
     } catch (error) {

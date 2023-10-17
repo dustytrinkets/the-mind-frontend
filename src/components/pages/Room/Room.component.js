@@ -46,29 +46,28 @@ const Room = () => {
   //   // return ev.returnValue = 'Are you sure you want to close?Help';
   // });
 
-  const loadGame = useCallback(async ({roomId: currentRoomId, gameId}) => {
+  const loadGame = useCallback(async ({roomIdSent, gameIdSent}) => {
     // console.log('GAME STARTED')
-    console.log('loadGame: ', { roomId, currentRoomId })
     // todo check if this can be done using the socket rooms
-    if (currentRoomId !== roomId) {
+    if (roomIdSent !== roomId) {
       return
     }
-    if (!gameId) {
-      gameId = await gamesAPI.getActiveGameId(roomId)
+    if (!gameIdSent) {
+      gameIdSent = await gamesAPI.getActiveGameId(roomId)
     }
-    const path = generatePath('game/:gameId', { roomId, gameId: gameId });
+    const path = generatePath('game/:gameId', { roomId, gameId: gameIdSent });
     navigate(path, {
       state: {
         roomId,
         roomCode,
-        gameId,
+        gameId: gameIdSent,
         userId,
         creator,
-        roomUsers: roomUsers.map(user => user.name),
+        roomUsers,
         userName: name
       }
     });
-  }, [navigate, roomId, roomCode, userId, roomUsers, name])
+  }, [roomId, navigate, roomCode, userId, creator, roomUsers, name])
 
   const copyCodeToClipboard = () => {
     navigator.clipboard.writeText(roomCode);
@@ -76,27 +75,20 @@ const Room = () => {
     setTimeout(() => {setInfoMessage(null)}, 2000);
   }
 
-  const startNewGame = useCallback(async () => {
+  const startNewGameSocket = useCallback(async () => {
     try {
+      console.log('-----', roomUsers.length)
+      // if (roomUsers.length < 2) {
+      //   throw Error('You need at least 2 players to start a game')
+      // }
       const game = await gamesAPI.createGame(roomId, roomUsers)
+      console.log('-------game: ', game)
       socket.emit('startgame', { roomId, roomCode , id: game.id })
       loadGame({roomId, gameId: game.id})
     } catch (error) {
       setErrorMessage(error.message)
     }
-  }, [roomUsers])
-
-  const start = async () => {
-    try {
-      console.log('-----', roomUsers.length)
-      if (roomUsers.length < 2) {
-        throw Error('You need at least 2 players to start a game')
-      }
-      await startNewGame()
-    } catch (error) {
-      setErrorMessage(error.message)
-    }
-  }
+  }, [roomUsers, roomId, roomCode, socket, loadGame])
 
   useEffect(() => {
     socket.on('startgame', loadGame);
@@ -157,12 +149,12 @@ const Room = () => {
         </table>
       </div>
       {creator?.id === userId && (
-        <button onClick={start}>Start Game</button>
+        <button onClick={startNewGameSocket}>Start Game</button>
       )}
     {errorMessage && <div className="error"> {errorMessage} </div>}
     {infoMessage && <div className="info-bubble"> {infoMessage} </div>}
     </div>
-    
+
   );
 }
 
