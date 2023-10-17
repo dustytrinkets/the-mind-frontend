@@ -81,7 +81,6 @@ const Game = () => {
     screen.classList.remove('win')
     screen.classList.remove('lose')
     const circles = document.getElementsByClassName('circle')
-    console.log('circles', circles)
     Array.from(circles).forEach(circle => circle.classList.remove('lose-pointer'))
   }
 
@@ -147,7 +146,6 @@ const Game = () => {
   }, [roomId, roomCode, socket])
 
   const playAgain = useCallback(async ({ roomIdSent, newGameIdSent }) => {
-    console.log('playAgain', roomIdSent, newGameIdSent)
     if (roomIdSent !== roomId) {
       return
     }

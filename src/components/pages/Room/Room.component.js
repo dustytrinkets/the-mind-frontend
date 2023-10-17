@@ -32,7 +32,6 @@ const Room = () => {
       return
     }
     const roomUsers = await roomUsersAPI.getRoomUsers(roomId)
-    console.log('roomUsers: ', roomUsers)
     setRoomUsers(roomUsers);
   }, [roomId])
 
@@ -47,7 +46,6 @@ const Room = () => {
   // });
 
   const loadGame = useCallback(async ({roomIdSent, gameIdSent}) => {
-    // console.log('GAME STARTED')
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
@@ -77,13 +75,11 @@ const Room = () => {
 
   const startNewGameSocket = useCallback(async () => {
     try {
-      console.log('-----', roomUsers.length)
-      // if (roomUsers.length < 2) {
-      //   throw Error('You need at least 2 players to start a game')
-      // }
+      if (roomUsers.length < 2) {
+        throw Error('You need at least 2 players to start a game')
+      }
       const game = await gamesAPI.createGame(roomId, roomUsers)
-      console.log('-------game: ', game)
-      socket.emit('startgame', { roomId, roomCode , id: game.id })
++      socket.emit('startgame', { roomId, roomCode , id: game.id })
       loadGame({roomId, gameId: game.id})
     } catch (error) {
       setErrorMessage(error.message)
