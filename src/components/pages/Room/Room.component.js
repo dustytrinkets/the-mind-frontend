@@ -38,11 +38,11 @@ const Room = () => {
   // code for removing user if window closes
   // window.addEventListener("beforeunload", (ev) => {
   //   ev.preventDefault();
-  //   console.log('EV---', ev)
+  //   console.debug('EV---', ev)
   //   //send socket disconnect before leaving
   //   // this.server.emit('roomuser', 'test');
   //   // socket.emit('user_leave', {user_name: "johnjoe123"});
-  //   // return ev.returnValue = 'Are you sure you want to close?Help';
+  //   // return ev.returnValue = 'Are you sure you want to close?';
   // });
 
   const loadGame = useCallback(async ({roomIdSent, gameIdSent}) => {
@@ -79,7 +79,7 @@ const Room = () => {
         throw Error('You need at least 2 players to start a game')
       }
       const game = await gamesAPI.createGame(roomId, roomUsers)
-+      socket.emit('startgame', { roomId, roomCode , id: game.id })
+      socket.emit('startgame', { roomId, roomCode , id: game.id })
       loadGame({roomId, gameId: game.id})
     } catch (error) {
       setErrorMessage(error.message)

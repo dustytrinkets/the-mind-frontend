@@ -53,38 +53,17 @@ const Game = () => {
     setCurrentNumberPlayed(numberSent)
     setOrder(order + 1)
     if (userRandomNumber < numberSent && !playedNumbers.includes(userRandomNumber)) {
-      console.warn('-------LOSE')
       socket.emit('lose', { roomId, roomCode, id: gameId })
       return
     }
     setPlayedNumbers([...playedNumbers, numberSent])
-    console.warn('-------userNameSent', userNameSent)
-    console.warn('-------numberSent', numberSent)
-    console.warn('-------playedNumbers', playedNumbers)
-    console.warn('-------roomUsers.length', roomUsers.length)
-    console.warn(playedNumbers.length === roomUsers.length - 1)
+
     if (playedNumbers.length === roomUsers.length - 1) {
-      console.warn('-------WIN')
       socket.emit('win', { roomId, roomCode, id: gameId })
     }
   }, [roomId, revealUserNumber, order, userRandomNumber, playedNumbers, roomUsers.length, roomCode, gameId, socket])
 
-  const restartGame = () => {
-    setOrder(0)
-    setPlayedNumbers([])
-    setGameStatus('active')
-    setCurrentNumberPlayed(0)
-    const userDiv = document.getElementById(userName)
-    userDiv.classList.remove('played')
-    userDiv.addEventListener('click', sendNumber)
-    const screen = document.getElementsByClassName('Screen')[0]
-    screen.classList.remove('win')
-    screen.classList.remove('lose')
-    const circles = document.getElementsByClassName('circle')
-    Array.from(circles).forEach(circle => circle.classList.remove('lose-pointer'))
-  }
-
-  const sendNumber = async (e) => {
+  const sendNumber = useCallback(async (e) => {
     if (gameStatus !== 'active') {
       return
     }
@@ -96,21 +75,41 @@ const Game = () => {
     }
     socket.emit('sendnumber', { roomId, userName, userId, userRandomNumber })
     await participationsAPI.updateParticipation({ gameId, userId, order })
+  }, [gameId, roomId, userId, userName, userRandomNumber, playedNumbers, socket, order, gameStatus])
+
+  const restartStates = () => {
+    setOrder(0)
+    setPlayedNumbers([])
+    setGameStatus('active')
+    setCurrentNumberPlayed(0)
   }
 
-  const uncoverUserNumbers = useCallback(async () => {
+  const restartGame = useCallback(() => {
+    restartStates()
+    const userDiv = document.getElementById(userName)
+    userDiv.classList.remove('played')
+    userDiv.addEventListener('click', sendNumber)
+    const screen = document.getElementsByClassName('Screen')[0]
+    screen.classList.remove('win')
+    screen.classList.remove('lose')
+    const circles = document.getElementsByClassName('circle')
+    Array.from(circles).forEach(circle => circle.classList.remove('lose-pointer'))
+  }, [sendNumber, userName])
+
+  const uncoverNumbersAndEndStyles = useCallback(async () => {
     const participations = await participationsAPI.getParticipationNumbersByGameId({ gameId })
     participations?.forEach(participation => {
       if (userName !== participation.user.name) {
         const userDiv = document.getElementById(participation.user.name)
         const numberDiv = userDiv.getElementsByClassName('number')[0]
         numberDiv.innerHTML = participation.number
-        const highestOrderParticipation = participations?.filter(participation => participation.order !== null)?.reduce((prev, current) => (prev.order > current.order) ? prev : current)
-        const lastUserDiv = document.getElementById(highestOrderParticipation?.user.name)
-        const lastNumberCircle = lastUserDiv?.getElementsByClassName('circle')[0]
-        lastNumberCircle?.classList.add('lose-pointer')
       }
     })
+    const participationsFiltered = participations?.filter(participation => participation.order !== null)
+    const highestOrderParticipation = participationsFiltered ? participationsFiltered.reduce((prev, current) => (prev.order > current.order) ? prev : current, 0) : null
+    const lastUserDiv = document.getElementById(highestOrderParticipation?.user?.name)
+    const lastNumberCircle = lastUserDiv?.getElementsByClassName('circle')[0]
+    lastNumberCircle?.classList.add('lose-pointer')
 
   }, [gameId, userName])
 
@@ -122,9 +121,9 @@ const Game = () => {
     setGameStatus('lose')
     const screen = document.getElementsByClassName('Screen')[0]
     screen.classList.add('lose')
-    await uncoverUserNumbers()
+    await uncoverNumbersAndEndStyles()
     await updateStatuses({ roomStatus: 'finished', gameStatus: 'lose' })
-  }, [roomId, updateStatuses])
+  }, [roomId, uncoverNumbersAndEndStyles, updateStatuses])
 
   const gameSuccess = useCallback(async ({ roomIdSent }) => {
     // todo check if this can be done using the socket rooms
@@ -139,11 +138,10 @@ const Game = () => {
 
   const playAgainSocket = useCallback(async () => {
     // todo check if this can be done using the socket rooms
-    restartGame()
     const newGame = await gamesAPI.createGame(roomId, roomUsers)
     socket.emit('playagain', { roomId, roomCode, newGameId: newGame.id })
     socket.emit('startgame', { roomId, roomCode, id: newGame.id })
-  }, [roomId, roomCode, socket])
+  }, [roomId, roomUsers, socket, roomCode])
 
   const playAgain = useCallback(async ({ roomIdSent, newGameIdSent }) => {
     if (roomIdSent !== roomId) {
@@ -163,16 +161,17 @@ const Game = () => {
         userName
       }
     });
-  }, [roomId, roomCode, userId, creator, roomUsers, userName, socket, navigate])
+  }, [roomId, restartGame, roomCode, navigate, userId, creator, roomUsers, userName])
 
   const backToRoomSocket = useCallback(async () => {
-    socket.emit('backtoroom', { roomId })
-  }, [roomId, roomCode, socket])
+    socket.emit('backtoroom', { roomId, roomCode })
+  }, [socket, roomId, roomCode])
 
   const backToRoom = useCallback(async ({ roomIdSent }) => {
     if (roomIdSent !== roomId) {
       return
     }
+    restartGame()
     const path = generatePath('room/:roomCode', { roomCode });
     navigate(`../${path}`, {
       replace: true,
@@ -185,9 +184,10 @@ const Game = () => {
         userName
       }
     });
-  }, [roomId, roomCode, userId, creator, roomUsers, userName, socket])
+  }, [roomId, restartGame, roomCode, navigate, userId, creator, roomUsers, userName])
 
   const backToHome = async () => {
+    restartGame()
     const path = generatePath('/');
     navigate(`../${path}`, {
       replace: true,
@@ -207,7 +207,7 @@ const Game = () => {
     return () => {
       socket.off('lose', gameOver);
     }
-  }, [socket, revealPlay, gameOver])
+  }, [socket, gameOver])
 
   useEffect(() => {
     socket.on('backtoroom', backToRoom)
@@ -229,7 +229,7 @@ const Game = () => {
     return () => {
       socket.off('win', gameSuccess);
     }
-  }, [socket, revealPlay, gameSuccess])
+  }, [socket, gameSuccess])
 
 
   useEffect(() => {
