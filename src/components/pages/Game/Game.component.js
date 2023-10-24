@@ -137,13 +137,13 @@ const Game = () => {
   }, [roomId, updateStatuses])
 
   const playAgainSocket = useCallback(async () => {
-    // todo check if this can be done using the socket rooms
     const newGame = await gamesAPI.createGame(roomId, roomUsers)
     socket.emit('playagain', { roomId, roomCode, newGameId: newGame.id })
     socket.emit('startgame', { roomId, roomCode, id: newGame.id })
   }, [roomId, roomUsers, socket, roomCode])
 
   const playAgain = useCallback(async ({ roomIdSent, newGameIdSent }) => {
+    // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
     }
@@ -168,6 +168,7 @@ const Game = () => {
   }, [socket, roomId, roomCode])
 
   const backToRoom = useCallback(async ({ roomIdSent }) => {
+    // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
     }

@@ -45,7 +45,7 @@ const Room = () => {
   //   // return ev.returnValue = 'Are you sure you want to close?';
   // });
 
-  const loadGame = useCallback(async ({roomIdSent, gameIdSent}) => {
+  const startGame = useCallback(async ({roomIdSent, gameIdSent}) => {
     // todo check if this can be done using the socket rooms
     if (roomIdSent !== roomId) {
       return
@@ -73,25 +73,25 @@ const Room = () => {
     setTimeout(() => {setInfoMessage(null)}, 2000);
   }
 
-  const startNewGameSocket = useCallback(async () => {
+  const startGameSocket = useCallback(async () => {
     try {
       if (roomUsers.length < 2) {
         throw Error('You need at least 2 players to start a game')
       }
       const game = await gamesAPI.createGame(roomId, roomUsers)
       socket.emit('startgame', { roomId, roomCode , id: game.id })
-      loadGame({roomId, gameId: game.id})
+      startGame({roomId, gameId: game.id})
     } catch (error) {
       setErrorMessage(error.message)
     }
-  }, [roomUsers, roomId, roomCode, socket, loadGame])
+  }, [roomUsers, roomId, roomCode, socket, startGame])
 
   useEffect(() => {
-    socket.on('startgame', loadGame);
+    socket.on('startgame', startGame);
     return () => {
-      socket.off('startgame', loadGame);
+      socket.off('startgame', startGame);
     }
-  }, [socket, name, loadGame])
+  }, [socket, name, startGame, roomCode])
 
   const getRoomCreator = async () => {
     const creator = await roomsAPI.getRoomCreator(roomId)
@@ -145,7 +145,7 @@ const Room = () => {
         </table>
       </div>
       {creator?.id === userId && (
-        <button onClick={startNewGameSocket}>Start Game</button>
+        <button onClick={startGameSocket}>Start Game</button>
       )}
     {errorMessage && <div className="error"> {errorMessage} </div>}
     {infoMessage && <div className="info-bubble"> {infoMessage} </div>}
