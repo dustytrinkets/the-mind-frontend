@@ -14,14 +14,17 @@ export const createRoom = async (userId) => {
 
 export const getRoomByCode = async (roomCode) => {
   try {
-      console.debug('Getting Room', roomCode)
-      const { data: room } = await axios.get(`${env.API_URL}/rooms/code/${roomCode}`);
-      if (!room) {
-        console.debug('Room not found')
-        throw new Error('Room not found');
-      }
-      console.debug('Found room', room)
-      return room;
+    if (!roomCode) {
+      throw new Error('Room code is required');
+    }
+    console.debug('Getting Room', roomCode)
+    const { data: room } = await axios.get(`${env.API_URL}/rooms/code/${roomCode}`);
+    if (!room) {
+      console.debug('Room not found')
+      throw new Error('Room not found');
+    }
+    console.debug('Found room', room)
+    return room;
   } catch (error) {
       throw Error(error.message)
   }
